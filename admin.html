@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>অ্যাডমিন — দোকান ব্যবস্থাপনা</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Hind Siliguri','Noto Sans Bengali',system-ui,Arial,sans-serif;
+    background:#f3f7f2;color:#1f2a1f;line-height:1.6}
+  header{background:#1b5e20;color:#fff;padding:16px;text-align:center}
+  header h1{margin:0;font-size:20px}
+  .wrap{max-width:520px;margin:0 auto;padding:16px}
+  .card{background:#fff;border:1px solid #e0e8e0;border-radius:16px;padding:16px;margin-bottom:16px}
+  label{font-weight:600;font-size:14px;display:block;margin:10px 0 4px}
+  input{width:100%;padding:12px;font-size:16px;border:1px solid #d8e0d8;border-radius:10px;font-family:inherit}
+  .btn{width:100%;padding:14px;font-size:17px;font-weight:700;color:#fff;background:#2e7d32;
+    border:none;border-radius:12px;cursor:pointer;font-family:inherit;margin-top:14px}
+  .btn:active{background:#1b5e20}
+  .pin-row{display:flex;gap:10px;align-items:flex-end}
+  .pin-row>div{flex:1}
+  .shop{border:1px solid #e0e8e0;border-radius:12px;padding:12px;margin-bottom:10px;position:relative}
+  .shop .n{font-weight:700;color:#1b5e20}
+  .shop .meta{font-size:13px;color:#5d6b5d}
+  .del{position:absolute;top:10px;right:10px;background:#fdecea;color:#c62828;border:none;
+    border-radius:8px;padding:6px 10px;font-weight:700;cursor:pointer;font-family:inherit}
+  .msg{padding:10px;border-radius:8px;margin-top:10px;text-align:center;font-weight:600;display:none}
+  .ok{background:#e6f4e6;color:#1b5e20} .err{background:#fdecea;color:#c62828}
+  .hint{font-size:13px;color:#5d6b5d}
+  a.back{color:#2e7d32;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<header><h1>🏪 দোকান ব্যবস্থাপনা (অ্যাডমিন)</h1></header>
+<div class="wrap">
+
+  <div class="card">
+    <label for="pin">🔑 অ্যাডমিন PIN</label>
+    <input id="pin" type="password" placeholder="PIN দিন (ডিফল্ট: 1234)">
+    <p class="hint">PIN একবার দিলেই চলবে। যোগ/মুছতে এটা লাগবে।</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;color:#1b5e20">নতুন দোকান যোগ করুন</h3>
+    <label>দোকানের নাম *</label>
+    <input id="name" placeholder="যেমন: মেসার্স কৃষি ভাণ্ডার">
+    <label>এলাকা / গ্রাম-বাজার *</label>
+    <input id="area" placeholder="যেমন: রংপুর সদর, মিঠাপুকুর">
+    <label>মোবাইল নম্বর</label>
+    <input id="phone" inputmode="tel" placeholder="যেমন: 017XXXXXXXX">
+    <label>ঠিকানা (ঐচ্ছিক)</label>
+    <input id="address" placeholder="দোকানের বিস্তারিত ঠিকানা">
+    <label>ম্যাপ লিংক (ঐচ্ছিক)</label>
+    <input id="map" placeholder="Google Maps লিংক পেস্ট করুন">
+    <button class="btn" onclick="addShop()">➕ দোকান যোগ করুন</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;color:#1b5e20">যোগ করা দোকানসমূহ</h3>
+    <div id="list"><p class="hint">লোড হচ্ছে...</p></div>
+  </div>
+
+  <p style="text-align:center"><a class="back" href="/">← অ্যাপে ফিরে যান</a></p>
+</div>
+
+<script>
+function showMsg(t, ok){
+  const m=document.getElementById('msg');
+  m.textContent=t; m.className='msg '+(ok?'ok':'err'); m.style.display='block';
+  setTimeout(()=>m.style.display='none', 3000);
+}
+
+async function load(){
+  try{
+    const r=await fetch('/shops'); const j=await r.json();
+    render(j.items||[]);
+  }catch(e){ document.getElementById('list').innerHTML='<p class="hint">লোড করা যায়নি।</p>'; }
+}
+
+function render(items){
+  const el=document.getElementById('list');
+  if(!items.length){ el.innerHTML='<p class="hint">এখনো কোনো দোকান নেই।</p>'; return; }
+  el.innerHTML=items.map(s=>`
+    <div class="shop">
+      <button class="del" onclick="delShop('${s.id}')">মুছুন</button>
+      <div class="n">${s.name}</div>
+      <div class="meta">📍 ${s.area}${s.phone?' · 📞 '+s.phone:''}</div>
+      ${s.address?`<div class="meta">${s.address}</div>`:''}
+    </div>`).join('');
+}
+
+async function addShop(){
+  const pin=document.getElementById('pin').value.trim();
+  if(!pin){ showMsg('আগে PIN দিন', false); return; }
+  const body={
+    pin,
+    name:document.getElementById('name').value,
+    area:document.getElementById('area').value,
+    phone:document.getElementById('phone').value,
+    address:document.getElementById('address').value,
+    map:document.getElementById('map').value,
+  };
+  if(!body.name.trim()||!body.area.trim()){ showMsg('নাম ও এলাকা দিন', false); return; }
+  try{
+    const r=await fetch('/admin/shops',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j=await r.json();
+    if(j.ok){
+      showMsg('✅ যোগ হয়েছে', true);
+      ['name','area','phone','address','map'].forEach(id=>document.getElementById(id).value='');
+      render(j.items);
+    } else showMsg(j.error||'সমস্যা', false);
+  }catch(e){ showMsg('সার্ভারে সমস্যা', false); }
+}
+
+async function delShop(id){
+  const pin=document.getElementById('pin').value.trim();
+  if(!pin){ showMsg('আগে PIN দিন', false); return; }
+  try{
+    const r=await fetch('/admin/shops/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin,id})});
+    const j=await r.json();
+    if(j.ok){ render(j.items); } else showMsg(j.error||'সমস্যা', false);
+  }catch(e){ showMsg('সার্ভারে সমস্যা', false); }
+}
+
+load();
+</script>
+</body>
+</html>
